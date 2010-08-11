@@ -1,0 +1,300 @@
+<html>
+  <head>
+    <title>Mastermind</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script type="text/javascript" src="jquery.blockUI.js"></script>
+    <style type="text/css">
+
+      table {
+	border: none;
+      }
+      
+      td {
+	height: 70px;
+	width: 65px;
+	border-width: 1px;
+	border-style: solid;
+	border-color: gray;
+	background-color: #003300;
+	background-repeat: no-repeat;
+	background-image: none;
+      }
+
+      td.hearts {
+	background-image: url('hearts.png');
+      }
+
+      td.clubs {
+	background-image: url('clubs.png');
+      }
+
+      td.diamonds {
+	background-image: url('diamonds.png');
+      }
+
+      td.spades {
+	background-image: url('spades.png');
+      }
+
+      td.star {
+	background-image: url('star.png');
+      }
+
+      td.garfield {
+	background-image: url('garfield.png');
+      }
+
+      td.white {
+	background-image: url('white.png');
+      }
+
+      td.black {
+	background-image: url('black.png');
+      }
+
+      #symbol-container {
+	float: left;
+	padding-bottom: 20px;
+	width: 100%;
+      }
+
+      #guess-container {
+	float: left;
+	width: 395px;
+      }
+
+      #score-container {
+	float: left;
+	width: 300px;
+      }
+
+      #symbols td:hover {
+	cursor: pointer;
+      }
+
+      td.guess-button, td.delete {
+	background: none;
+      }
+      
+      td.guess-button input, td.delete input {
+	padding: 20px 30px;
+      }
+
+    </style>
+  </head>
+  <body>
+    <script>
+
+      var symbols = {"hearts":0, "clubs":1, "diamonds":2, "spades":3, "star":4, "garfield":5}
+
+      var invertedSymbols = {};
+
+      for (var key in symbols) {
+	invertedSymbols[symbols[key]] = key
+      }
+
+      var currentTry = 0;
+      var currentElement;
+
+      //our current guess
+      var guess = new Array();
+
+      //correct combination
+      var combination = new Array(
+	Math.floor(Math.random()*6),
+	Math.floor(Math.random()*6),
+	Math.floor(Math.random()*6),
+	Math.floor(Math.random()*6)
+      )
+
+      var combinationCopy;
+
+      var correctSymbolAndPlace;
+      var correctSymbol;
+
+      $(document).ready(function(){
+
+	//set up the solution
+	for (var i=0; i<4; i++) {
+	  $('#solution' + i.toString()).addClass(invertedSymbols[combination[i]]);
+	}
+
+	//initialize guessing table
+	//could be done with hardcoded html but this is cooler and less repetition
+
+	for (var row=0; row<6; row++) {
+	  $('#guesses tbody').append('<tr></tr>');
+	  for (var col=0; col<4; col++) {
+	    $('#guesses tbody tr').last().append('<td id="guess' + row + col + '"></td>');
+	  }
+	  $('#guesses tbody tr').last().append('<td id="guess-button' + row + '" class="guess-button"><input type="button" value="guess" disabled="true" /></td>');
+	}
+
+	//initialize score table
+	for (var row=0; row<6; row++) {
+	  $('#scores tbody').append('<tr></tr>');
+	  for (var col=0; col<4; col++) {
+	    $('#scores tbody tr').last().append('<td id="score' + row + col + '"></td>');
+	  }
+	}
+
+	//clicking on a symbol
+	$(".symbol").click(function() {
+	  if (currentTry >= 6)
+	    return false;
+	  else if (guess.length >= 4)
+	    return false
+	  else if (guess.length == 0) {
+	    $("#delete input").attr('disabled', false);
+	  }
+
+	  currentElement = $(this).attr('id');
+	  $('#guess' + currentTry + guess.length).addClass(currentElement);
+	  guess.push(currentElement);
+
+	  if (guess.length == 4)
+	    $("#guess-button" + currentTry + " input").attr('disabled', false);
+	});
+
+	//clicking on a delete button
+	$("#delete input").click(function() {
+	  if (currentTry >= 6)
+	    return false;
+	  else if (guess.length > 0) {
+	    $('#guess' + currentTry.toString() + (guess.length-1).toString()).removeClass(guess[guess.length-1]);
+	    guess.pop()
+	  }
+	  if (guess.length == 0) {
+	    $("#delete input").attr('disabled', true);
+	  } else if (guess.length == 3) {
+	    $("#guess-button" + currentTry + " input").attr('disabled', true);
+	  }
+	});
+
+	//clicking on a guess button
+	$(".guess-button input").click(function() {
+	  $("#delete input").attr('disabled', true);
+	  correctSymbolAndPlace = 0;
+	  correctSymbol = 0; 
+	  //deep copy
+	  combinationCopy = $.extend(true, [], combination);
+
+	  //correct place
+	  var i = 0;
+	  while (typeof combinationCopy[i] != "undefined") {
+	    if (symbols[guess[i]] == combinationCopy[i]) {
+	      correctSymbolAndPlace += 1;
+	      //remove element from combinationCopy and guess
+	      combinationCopy.splice(i,1);
+	      guess.splice(i,1);
+	    } else {
+	      i += 1;
+	    }  
+	  }
+
+	  //symbol, but not place
+	  i = 0;
+	  var j;
+	  while (typeof combinationCopy[i] != "undefined") {
+	    j = 0;
+	    while (typeof guess[j] != "undefined") {
+	      if (symbols[guess[j]] == combinationCopy[i]) {
+		correctSymbol += 1;
+		combinationCopy.splice(i,1);
+		guess.splice(j,1);
+		j = 0;
+		i -= 1;
+		break;
+	      } else {
+		j += 1;
+	      }
+	    }
+	    i += 1;
+	  }
+
+	  //now we have correctSymbolAndPlace and correctSymbol and need to give feedback to the user
+	  for (i = 0; i<correctSymbolAndPlace; i++) {
+	    $("#score" + currentTry.toString() + i.toString()).addClass("white");
+	  }
+
+	  for (i = correctSymbolAndPlace; i < correctSymbolAndPlace + correctSymbol; i++) {
+	    $("#score" + currentTry.toString() + i.toString()).addClass("black");
+	  }
+
+	  //did the user guess it?
+	  if (correctSymbolAndPlace == 4) {
+	    alert("Congratulations! You guessed the secret combination!");
+	    history.go(0);
+	  }
+
+	  //reset/increment values
+	  guess.length = 0;
+	  currentTry += 1;
+	  $(this).attr('disabled', true);
+
+	  //is it over?
+	  if (currentTry == 6) {
+	    showSolution();
+	  }
+	});
+
+	$('#close').click(function() { 
+	  $.unblockUI(); 
+	  history.go(0);
+	}); 
+
+      });
+
+      function showSolution(){
+	$.blockUI({ message: $('#combination-box'), css: { width: '275px' } });
+      }
+
+    </script>
+
+    <div id="combination-box" style="display:none; cursor: default"> 
+      <p>Fail :( This is the combination:</p> 
+      <table>
+	<tr>
+	  <td id="solution0"></td>
+	  <td id="solution1"></td>
+	  <td id="solution2"></td>
+	  <td id="solution3"></td>
+	</tr>
+      </table>
+      <a href="#" id="close">Close</a>
+    </div> 
+
+    <div id="symbol-container">
+      <table id="symbols">
+	<tbody>
+	  <tr>
+	    <td id="hearts" class="hearts symbol"></td>
+	    <td id="clubs" class="clubs symbol"></td>
+	    <td id="diamonds" class="diamonds symbol"></td>
+	    <td id="spades" class="spades symbol"></td>
+	    <td id="star" class="star symbol"></td>
+	    <td id="garfield" class="garfield symbol"></td>
+	    <td id="delete" class="delete"><input type="button" value="delete" disabled="true" /></td>
+	  </tr>
+	</tbody>
+      </table>
+    </div>
+
+    <div id="guess-container">
+
+      <table id="guesses">
+	<tbody>
+	</tbody>
+      </table>
+
+    </div>
+
+    <div id="score-container">
+      <table id="scores">
+	<tbody>
+	</tbody>
+      </table>
+    </div>
+
+  </body>
+</html>
